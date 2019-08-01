@@ -1,0 +1,61 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: webapps-devops
+  labels:
+    net.beedemo.deploy.type: workshop
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: webapps-devops
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: webapps-devops-staging
+  labels:
+    net.beedemo.deploy.type: workshop
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: webapps-devops
+      labels:
+        net.beedemo.deploy.type: workshop
+        app: webapps-devops
+        env: staging
+    spec:
+      containers:
+      - name: webapps-devops
+        image: gcr.io/core-workshop/helloworld-nodejs:webapps-devops-1
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "50m"
+        imagePullPolicy: Always
+        ports:
+        - name: public
+          containerPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: webapps-devops
+  labels:
+    net.beedemo.deploy.type: workshop
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /webapps-devops/?(.*)
+        backend:
+          serviceName: webapps-devops
+          servicePort: 80
+    host: staging.cb-sa.io
